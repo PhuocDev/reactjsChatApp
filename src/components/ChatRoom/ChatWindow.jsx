@@ -3,6 +3,11 @@ import React, { useContext, useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { Button, Tooltip, Avatar, Form, Input, Alert } from 'antd';
 import Message from './Message';
+import { ChatContext, ChatProvider } from '../context/chatContext';
+import firebase from 'firebase/app';
+import 'firebase/database';
+import 'firebase/firestore';
+import { UserContext } from '../context/userContext';
 // import { AppContext } from '../../Context/AppProvider';
 // import { addDocument } from '../../firebase/services';
 // import { AuthContext } from '../../Context/AuthProvider';
@@ -72,92 +77,86 @@ const MessageListStyled = styled.div`
 
 export default function ChatWindow() {
 
-  // const { selectedRoom, members, setIsInviteMemberVisible } =
-  //   useContext(AppContext);
-  // const {
-  //   user: { uid, photoURL, displayName },
-  // } = useContext(AuthContext);
+  const {selectedRoom, setSelectedRoom} = useContext(ChatContext);
+  const [usersInRoom, setUsersInRoom] = useState([]);
+  const {currentUser, setCurrentUser} = useContext(UserContext);
+  const [messages, setMessages] = useState([]);
 
-  // const [inputValue, setInputValue] = useState('');
-  // const [form] = Form.useForm();
-  // const inputRef = useRef(null);
-  // const messageListRef = useRef(null);
-
-  // const handleInputChange = (e) => {
-  //   setInputValue(e.target.value);
-  // };
-
-  // const handleOnSubmit = () => {
-  //   addDocument('messages', {
-  //     text: inputValue,
-  //     uid,
-  //     photoURL,
-  //     roomId: selectedRoom.id,
-  //     displayName,
-  //   });
-
-  //   form.resetFields(['message']);
-
-  //   // focus to input again after submit
-  //   if (inputRef?.current) {
-  //     setTimeout(() => {
-  //       inputRef.current.focus();
-  //     });
-  //   }
-  // };
-
-  // const condition = React.useMemo(
-  //   () => ({
-  //     fieldName: 'roomId',
-  //     operator: '==',
-  //     compareValue: selectedRoom.id,
-  //   }),
-  //   [selectedRoom.id]
-  // );
-
-  // const messages = useFirestore('messages', condition);
-
-  // useEffect(() => {
-  //   // scroll to bottom after message changed
-  //   if (messageListRef?.current) {
-  //     messageListRef.current.scrollTop =
-  //       messageListRef.current.scrollHeight + 50;
-  //   }
-  // }, [messages]);
+  useEffect(() => {
+    if (selectedRoom != null) {
+      const messagesRef = firebase.database().ref(`rooms/${selectedRoom.id}/messages`);
+      const fetchMessages = async () => {
+        try {
+          const snapshot = await messagesRef.once('value');
+          const messageData = snapshot.val();
+          if (messageData) {
+            const messageList = Object.values(messageData);
+            setMessages(messageList);
+          }
+        } catch (error) {
+          console.log('Error fetching messages:', error);
+        }
+      };
+      fetchMessages();
+    } else {
+      setMessages([]);
+    }
+  }, [messages]);
 
 
-  const mockSelectedRoom = { id: 1, name: "Room 1" };
-  const mockMembers = [
-    { uid: 1, displayName: "John Doe" },
-    { uid: 2, displayName: "Jane Smith" },
-  ];
+  useEffect(() => {
+    const fetchUsersInRoom = async () => {
+      if (selectedRoom != null) {
+        const usersRef = firebase.database().ref(`rooms/${selectedRoom.id}/user_ids`);
 
-  const mockAuthUser = {
-    uid: 123,
-    photoURL: "https://55knots.com.au/wp-content/uploads/2021/01/Zanj-Avatar-scaled.jpg",
-    displayName: "John Doe",
+        try {
+          const snapshot = await usersRef.once('value');
+          const userIds = snapshot.val();
+          if (userIds) {
+            const userIdsArray = Object.keys(userIds);
+            console.log("danh sach thanh vien trong phong: ")
+            console.log(userIdsArray);
+            setUsersInRoom(userIdsArray);
+          } else {
+            setUsersInRoom([]);
+          }
+        } catch (error) {
+          console.log('Error fetching users in room:', error);
+        }
+      } else {
+        setUsersInRoom([]);
+      }
+    };
+
+    fetchUsersInRoom();
+  }, [selectedRoom]);
+
+  const addUserToRoom = (roomId, userId) => {
+    const usersRef = firebase.database().ref(`rooms/${roomId}/user_ids`);
+    usersRef
+      .child(userId)
+      .set(true)
+      .then(() => {
+        console.log('User added to room successfully');
+      })
+      .catch((error) => {
+        console.log('Error adding user to room:', error);
+      });
   };
+
+  const AddUserToRoomButton = () => {
+      const userId = prompt('Enter user ID');
+      console.log(userId);
+      if (userId) {
+        addUserToRoom(selectedRoom.id, userId);
+      }
+  }
 
   const mockMessages = [
     { id: 1, text: "Hello", uid: 1, displayName: "John Doe" },
     { id: 2, text: "Hi", uid: 2, displayName: "Jane Smith" },
   ];
-  const {
-    selectedRoom,
-    members,
-    setIsInviteMemberVisible,
-  } = //useContext(AppContext) ||
-  {
-    selectedRoom: mockSelectedRoom,
-    members: mockMembers,
-    setIsInviteMemberVisible: () => {},
-  };
 
-  //get current user here
-  const {
-    user: { uid, photoURL, displayName },
-  } = //useContext(AuthContext) ||
-  { user: mockAuthUser };
 
   const [inputValue, setInputValue] = useState("");
   const [form] = Form.useForm();
@@ -167,21 +166,46 @@ export default function ChatWindow() {
   const handleInputChange = (e) => {
     setInputValue(e.target.value);
   };
+  const createMessagesField = async () => {
+    const roomsRef = firebase.database().ref(`rooms/${selectedRoom.id}`);
+    try {
+      await roomsRef.update({
+        messages: true
+      });
+    } catch (error) {
+      console.log('Error creating messages field:', error);
+    }
+  };
+  const handleOnSubmit = async () => {
 
-  const handleOnSubmit = () => {
+    const messagesRef = firebase.database().ref(`rooms/${selectedRoom.id}/messages`);
     const newMessage = {
-      id: Math.random(),
-      text: inputValue,
-      uid,
-      photoURL,
+      userId: String(currentUser.id),
+      username: currentUser.email,
       roomId: selectedRoom.id,
-      displayName,
+      content: inputValue,
+      timestamp: firebase.database.ServerValue.TIMESTAMP
     };
+
+    try {
+      await createMessagesField();
+      // Create "messages" field if it doesn't exist
+      const newMessageRef = messagesRef.push();
+      await newMessageRef.set({
+        userId: String(currentUser.id),
+        username: currentUser.email,
+        roomId: selectedRoom.id,
+        content: inputValue,
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+      });
+    } catch (error) {
+      console.log('Error sending message:', error);
+    }
     // Mock addDocument function
-    console.log("Adding new message:", newMessage);
     const newMessageList = [...messages, newMessage];
     setMessages(newMessageList);
     console.log(newMessageList);
+
     form.resetFields(["message"]);
 
     // focus to input again after submit
@@ -192,18 +216,7 @@ export default function ChatWindow() {
     }
   };
 
-  const condition = React.useMemo(
-    () => ({
-      fieldName: "roomId",
-      operator: "==",
-      compareValue: selectedRoom.id,
-    }),
-    [selectedRoom.id]
-  );
 
-  // const messages =  //useFirestore("messages", condition) ||
-  //                   mockMessages;
-  const [messages, setMessages] = useState(mockMessages)
 
   useEffect(() => {
     // scroll to bottom after message changed
@@ -215,7 +228,7 @@ export default function ChatWindow() {
 
   return (
     <WrapperStyled>
-      {selectedRoom.id ? (
+      {selectedRoom ? (
         <>
           <HeaderStyled>
             <div className='header__info'>
@@ -228,20 +241,18 @@ export default function ChatWindow() {
               <Button
                 icon={<UserAddOutlined />}
                 type='text'
-                onClick={() => setIsInviteMemberVisible(true)}
+                onClick={AddUserToRoomButton}
               >
                 Invite
               </Button>
               <Avatar.Group size='small' maxCount={2}>
-                {members.map((member) => (
-                  <Tooltip title={member.displayName} key={member.id}>
-                    <Avatar src={member.photoURL}>
-                      {member.photoURL
-                        ? ''
-                        : member.displayName?.charAt(0)?.toUpperCase()}
+                {/* {usersInRoom?.map((member) => (
+                  <Tooltip title={member.email.charAt(0)} key={member.id}>
+                    <Avatar src="https://t4.ftcdn.net/jpg/05/49/98/39/360_F_549983970_bRCkYfk0P6PP5fKbMhZMIb07mCJ6esXL.jpg">
+                      { member.displayName?.charAt(0)?.toUpperCase()}
                     </Avatar>
                   </Tooltip>
-                ))}
+                ))} */}
               </Avatar.Group>
             </ButtonGroupStyled>
           </HeaderStyled>

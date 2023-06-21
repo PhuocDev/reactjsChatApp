@@ -7,6 +7,7 @@ import firebase from 'firebase/app';
 import 'firebase/firestore';
 import 'firebase/database';
 import { UserContext } from '../context/userContext';
+import { ChatContext } from '../context/chatContext';
 
 const { Panel } = Collapse;
 
@@ -37,11 +38,8 @@ const LinkStyled = styled(Typography.Link)`
 export default function RoomList() {
   const [rooms, setRooms] = useState([]);
   const { currentUser } = useContext(UserContext);
+  const { selectedRoom, setSelectedRoom } = useContext(ChatContext);
 
-  const { setIsAddRoomVisible, setSelectedRoomId } = {
-    setIsAddRoomVisible: () => {},
-    setSelectedRoomId: () => {},
-  };
 
   useEffect(() => {
 
@@ -134,7 +132,7 @@ export default function RoomList() {
     <Collapse ghost defaultActiveKey={['1']}>
       <PanelStyled header='Group chat' key='1'>
         {rooms.map((room) => (
-          <LinkStyled key={room.id} onClick={() => setSelectedRoomId(room.id)}>
+          <LinkStyled key={room.id} onClick={() => setSelectedRoom(room)}>
             {room.name}
           </LinkStyled>
         ))}
@@ -149,9 +147,9 @@ export default function RoomList() {
       </PanelStyled>
 
       <PanelStyled header='Private chat' key='2'>
-        {mockPersons.map((room) => (
-          <LinkStyled key={room.id} onClick={() => setSelectedRoomId(room.id)}>
-            {room.name}
+        {mockPersons.map((person) => (
+          <LinkStyled key={person.id} onClick={() => setSelectedRoom(person)}>
+            {person.name}
           </LinkStyled>
         ))}
         <Button
