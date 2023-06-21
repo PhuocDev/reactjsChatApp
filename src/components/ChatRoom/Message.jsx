@@ -35,7 +35,10 @@ function formatDate(seconds) {
   return formattedDate;
 }
 
-export default function Message({ text, displayName, createdAt, photoURL }) {
+export default function Message({ content, displayName, createdAt, photoURL }) {
+  var date = new Date(createdAt);
+  var dateFormat = date.getDate() + '/' + date.getMonth() + '/' + date.getFullYear()
+                  + ' - ' + date.getHours() + ':' + date.getMinutes();
   return (
     <WrapperStyled>
       <div>
@@ -44,11 +47,11 @@ export default function Message({ text, displayName, createdAt, photoURL }) {
         </Avatar>
         <Typography.Text className='author'>{displayName}</Typography.Text>
         <Typography.Text className='date'>
-          {formatDate(createdAt?.seconds)}
+          {dateFormat}
         </Typography.Text>
       </div>
       <div>
-        <Typography.Text className='content'>{text}</Typography.Text>
+        <Typography.Text className='content'>{content}</Typography.Text>
       </div>
     </WrapperStyled>
   );

@@ -81,8 +81,29 @@ export default function ChatWindow() {
   const {selectedRoom, setSelectedRoom} = useContext(ChatContext);
   const [usersInRoom, setUsersInRoom] = useState([]);
   const {currentUser, setCurrentUser} = useContext(UserContext);
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState([{}]);
 
+  const fetchMessages = () => {
+    if (selectedRoom != null) {
+      const messagesRef = firebase.database().ref(`rooms/${selectedRoom.id}/messages`);
+      const fetchMessages = async () => {
+        try {
+          const snapshot = await messagesRef.once('value');
+          const messageData = snapshot.val();
+          if (messageData) {
+            const messageList = Object.values(messageData);
+            setMessages(messageList);
+            console.log("đã fetch lại danh sách tin nhắn:")
+          }
+        } catch (error) {
+          console.log('Error fetching messages:', error);
+        }
+      };
+      fetchMessages();
+    } else {
+      setMessages([]);
+    }
+  }
   useEffect(() => {
     if (selectedRoom != null) {
       const messagesRef = firebase.database().ref(`rooms/${selectedRoom.id}/messages`);
@@ -102,12 +123,13 @@ export default function ChatWindow() {
     } else {
       setMessages([]);
     }
-  }, []);
+  }, [selectedRoom.id]);
 
 
   useEffect(() => {
     const fetchUsersInRoom = async () => {
       if (selectedRoom != null) {
+        fetchMessages();
         const usersRef = firebase.database().ref(`rooms/${selectedRoom.id}/user_ids`);
 
         try {
@@ -209,7 +231,8 @@ export default function ChatWindow() {
     console.log(newMessageList);
 
     form.resetFields(["message"]);
-
+    setInputValue('');
+    fetchMessages();
     // focus to input again after submit
     if (inputRef?.current) {
       setTimeout(() => {
@@ -273,10 +296,10 @@ export default function ChatWindow() {
               {messages.map((mes) => (
                 <Message
                   key={mes.id}
-                  text={mes.content}
-                  photoURL={mes.photoURL}
-                  displayName={mes.displayName}
-                  createdAt={mes.createdAt}
+                  content={mes.content}
+                  photoURL={null}
+                  displayName={currentUser.email}
+                  createdAt={mes.timestamp}
                 />
               ))}
             </MessageListStyled>
