@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { Collapse, Typography, Button } from 'antd';
 import styled from 'styled-components';
 import { PlusSquareOutlined } from '@ant-design/icons';
@@ -6,6 +6,7 @@ import { PlusSquareOutlined } from '@ant-design/icons';
 import firebase from 'firebase/app';
 import 'firebase/firestore';
 import 'firebase/database';
+import { UserContext } from '../context/userContext';
 
 const { Panel } = Collapse;
 
@@ -35,6 +36,7 @@ const LinkStyled = styled(Typography.Link)`
 
 export default function RoomList() {
   const [rooms, setRooms] = useState([]);
+  const { currentUser } = useContext(UserContext);
 
   const { setIsAddRoomVisible, setSelectedRoomId } = {
     setIsAddRoomVisible: () => {},
@@ -42,23 +44,31 @@ export default function RoomList() {
   };
 
   useEffect(() => {
+
     // Lấy danh sách phòng chat từ Firebase Firestore
     const fetchRooms = async () => {
-      try {
-        const db = firebase.database();
-          const roomsRef = db.ref('rooms');
+      const userId = currentUser ? currentUser.uid : null;
+      if (userId) {
+        const roomsRef = firebase.database().ref('rooms');
+        const userRoomsRef = roomsRef.orderByChild(`user_ids/${userId}`).equalTo(true);
 
-          // Lắng nghe sự thay đổi trên danh sách phòng
-          roomsRef.on('value', (snapshot) => {
-            const roomData = snapshot.val();
-            const roomList = Object.entries(roomData).map(([id, room]) => ({
-              id,
-              ...room,
+        userRoomsRef.on('value', (snapshot) => {
+          const roomsData = snapshot.val();
+          if (roomsData) {
+            const roomsArray = Object.keys(roomsData).map((roomId) => ({
+              id: roomId,
+              ...roomsData[roomId],
             }));
-            setRooms(roomList);
-          });
-      } catch (error) {
-        console.error('Lỗi khi lấy danh sách phòng chat:', error);
+            // Lưu danh sách phòng vào state hoặc context
+            setRooms(roomsArray);
+          } else {
+            // Không có phòng nào chứa Id của người dùng hiện tại
+            setRooms([]);
+          }
+        });
+      } else {
+        // Người dùng chưa đăng nhập
+        setRooms([]);
       }
     };
     // Gọi hàm fetchRooms để lấy danh sách phòng ban đầu
@@ -72,20 +82,29 @@ export default function RoomList() {
     };
   }, [])
 
+
+
   // Thêm phòng mới vào Firebase Firestore
   const addRoom = async (roomName) => {
     try {
       const db = firebase.database();
-    const roomsRef = db.ref('rooms');
+      const roomsRef = db.ref('rooms');
 
-    // Tạo một khóa mới cho phòng
-    const newRoomRef = roomsRef.push();
-
-    // Thiết lập thông tin phòng
-    await newRoomRef.set({
-      name: roomName,
-      createdAt: firebase.database.ServerValue.TIMESTAMP,
-    });
+      // Lấy thông tin người dùng hiện tại từ Context API
+      const currentUserId = currentUser ? currentUser.uid : '';
+      // Tạo một khóa mới cho phòng
+      const newRoomRef = roomsRef.push();
+      // Thiết lập thông tin phòng
+      const roomData = {
+        name: roomName,
+        createdAt: firebase.database.ServerValue.TIMESTAMP,
+      };
+    // Thêm currentUserId vào user_ids của phòng
+    roomData.user_ids = {
+      [currentUserId]: true,
+    };
+    // Lưu thông tin phòng vào Firebase Realtime Database
+    await newRoomRef.set(roomData);
 
     console.log('Thêm phòng chat thành công. ID:', newRoomRef.key);
     } catch (error) {

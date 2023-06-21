@@ -3,21 +3,23 @@ import firebase from 'firebase/app';
 import 'firebase/auth';
 import { useHistory } from 'react-router-dom/cjs/react-router-dom.min';
 import { UserContext } from '../context/userContext';
-const Auth = ( ) => {
+
+const Auth = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const history = useHistory();
-  const [user, setUser] = useContext(UserContext);
-
+  const {currentUser, setCurrentUser} = useContext(UserContext);
   const handleSignIn = () => {
     firebase
       .auth()
       .signInWithEmailAndPassword(email, password)
       .then((userCredential) => {
         // Đăng nhập thành công, lưu thông tin người dùng vào state
-        setUser(userCredential.user);
-        console.log(userCredential.user);
+        // setUser(userCredential.user);
+        console.log("User đã đăng nhập là: " + userCredential.user);
+        const newCurrentUser = userCredential.user;
+        setCurrentUser(newCurrentUser);
         history.push("/chatroom");
       })
       .catch((error) => {
@@ -31,7 +33,7 @@ const Auth = ( ) => {
       .createUserWithEmailAndPassword(email, password)
       .then((userCredential) => {
         // Đăng ký thành công, lưu thông tin người dùng vào state
-        setUser(userCredential.user);
+        setCurrentUser(userCredential.user);
       })
       .catch((error) => {
         setError(error.message);

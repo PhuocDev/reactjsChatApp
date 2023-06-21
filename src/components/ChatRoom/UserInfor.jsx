@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { Button, Avatar, Typography } from 'antd';
 import styled from 'styled-components';
 import { AuthContext } from '../context/AuthProvider';
-
+import firebase from 'firebase/app';
+import 'firebase/auth';
+import { UserContext } from '../context/userContext';
 // import { auth } from '../../firebase/config';
 // import { AuthContext } from '../../Context/AuthProvider';
 // import { AppContext } from '../../Context/AppProvider';
@@ -20,7 +22,10 @@ const WrapperStyled = styled.div`
 `;
 
 export default function UserInfo() {
-
+  const {currentUser, setCurrentUser} = useContext(UserContext);
+  //get current user information
+  //const currentUser = useAuth();
+  console.log("Thông tin người đăng nhập: " );
   const mockUser = {
     displayName: "John Doe",
     photoURL: "https://mdbcdn.b-cdn.net/img/new/avatars/2.webp",
@@ -32,10 +37,10 @@ export default function UserInfo() {
   return (
     <WrapperStyled>
       <div>
-        <Avatar src={photoURL}>
+        {/* <Avatar src={photoURL}>
           {photoURL ? '' : displayName?.charAt(0)?.toUpperCase()}
-        </Avatar>
-        <Typography.Text className='username'>{displayName}</Typography.Text>
+        </Avatar> */}
+        <Typography.Text className='username'>{currentUser ? currentUser.email : "no user"}</Typography.Text>
       </div>
       <Button
         ghost
