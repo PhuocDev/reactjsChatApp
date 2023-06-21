@@ -8,6 +8,7 @@ import firebase from 'firebase/app';
 import 'firebase/database';
 import 'firebase/firestore';
 import { UserContext } from '../context/userContext';
+import { uid } from 'uid';
 // import { AppContext } from '../../Context/AppProvider';
 // import { addDocument } from '../../firebase/services';
 // import { AuthContext } from '../../Context/AuthProvider';
@@ -101,7 +102,7 @@ export default function ChatWindow() {
     } else {
       setMessages([]);
     }
-  }, [messages]);
+  }, []);
 
 
   useEffect(() => {
@@ -166,43 +167,44 @@ export default function ChatWindow() {
   const handleInputChange = (e) => {
     setInputValue(e.target.value);
   };
-  const createMessagesField = async () => {
-    const roomsRef = firebase.database().ref(`rooms/${selectedRoom.id}`);
-    try {
-      await roomsRef.update({
-        messages: true
-      });
-    } catch (error) {
-      console.log('Error creating messages field:', error);
-    }
-  };
+
+
+
   const handleOnSubmit = async () => {
 
-    const messagesRef = firebase.database().ref(`rooms/${selectedRoom.id}/messages`);
-    const newMessage = {
-      userId: String(currentUser.id),
-      username: currentUser.email,
-      roomId: selectedRoom.id,
-      content: inputValue,
-      timestamp: firebase.database.ServerValue.TIMESTAMP
-    };
+    // const messagesRef = firebase.database().ref(`rooms/${selectedRoom.id}/messages`);
 
     try {
-      await createMessagesField();
-      // Create "messages" field if it doesn't exist
-      const newMessageRef = messagesRef.push();
-      await newMessageRef.set({
-        userId: String(currentUser.id),
-        username: currentUser.email,
-        roomId: selectedRoom.id,
-        content: inputValue,
-        timestamp: firebase.database.ServerValue.TIMESTAMP
-      });
+        const roomsRef = firebase.database().ref('rooms');
+
+        // Tìm phòng hiện tại theo roomId
+        const currentRoomRef = roomsRef.child(selectedRoom.id);
+
+        // Lấy danh sách tin nhắn hiện tại từ phòng
+        const currentMessages = (await currentRoomRef.child('messages').once('value')).val() || [];
+
+        // Tạo một tin nhắn mới
+        const newMessage = {
+          userId: currentUser.uid,
+          roomId: selectedRoom.id,
+          content: inputValue,
+          timestamp: firebase.database.ServerValue.TIMESTAMP
+        };
+
+        // Thêm tin nhắn mới vào danh sách tin nhắn hiện tại
+        currentMessages.push(newMessage);
+
+        // Cập nhật danh sách tin nhắn trong phòng
+        await currentRoomRef.child('messages').set(currentMessages);
+
+        // Scroll đến cuối danh sách tin nhắn
+        // chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+
     } catch (error) {
       console.log('Error sending message:', error);
     }
     // Mock addDocument function
-    const newMessageList = [...messages, newMessage];
+    const newMessageList = [...messages, inputValue];
     setMessages(newMessageList);
     console.log(newMessageList);
 
@@ -216,7 +218,17 @@ export default function ChatWindow() {
     }
   };
 
+  useEffect(() => {
+    if (selectedRoom != null) {
+      const roomRef = firebase.database().ref('rooms').child(selectedRoom.id);
 
+      // Lắng nghe sự thay đổi trong danh sách tin nhắn của phòng
+      roomRef.child('messages').on('value', (snapshot) => {
+        const messagesData = snapshot.val() || [];
+        setMessages(messagesData);
+      });
+    }
+  }, []);
 
   useEffect(() => {
     // scroll to bottom after message changed
@@ -261,7 +273,7 @@ export default function ChatWindow() {
               {messages.map((mes) => (
                 <Message
                   key={mes.id}
-                  text={mes.text}
+                  text={mes.content}
                   photoURL={mes.photoURL}
                   displayName={mes.displayName}
                   createdAt={mes.createdAt}

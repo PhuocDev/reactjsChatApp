@@ -95,6 +95,7 @@ export default function RoomList() {
       // Thiết lập thông tin phòng
       const roomData = {
         name: roomName,
+        messages: [],
         createdAt: firebase.database.ServerValue.TIMESTAMP,
       };
     // Thêm currentUserId vào user_ids của phòng
