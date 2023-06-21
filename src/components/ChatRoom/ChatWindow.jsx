@@ -123,7 +123,7 @@ export default function ChatWindow() {
     } else {
       setMessages([]);
     }
-  }, [selectedRoom.id]);
+  }, []);
 
 
   useEffect(() => {
@@ -187,7 +187,10 @@ export default function ChatWindow() {
   const messageListRef = useRef(null);
 
   const handleInputChange = (e) => {
-    setInputValue(e.target.value);
+    if (e.target.value != "" && e.target.value != null ) {
+      setInputValue(e.target.value);
+    } else alert("please enter the message");
+
   };
 
 
@@ -195,8 +198,10 @@ export default function ChatWindow() {
   const handleOnSubmit = async () => {
 
     // const messagesRef = firebase.database().ref(`rooms/${selectedRoom.id}/messages`);
-
-    try {
+    if (inputValue == "") {
+      alert("please enter the message");
+    } else {
+      try {
         const roomsRef = firebase.database().ref('rooms');
 
         // Tìm phòng hiện tại theo roomId
@@ -208,6 +213,7 @@ export default function ChatWindow() {
         // Tạo một tin nhắn mới
         const newMessage = {
           userId: currentUser.uid,
+          username: currentUser.email,
           roomId: selectedRoom.id,
           content: inputValue,
           timestamp: firebase.database.ServerValue.TIMESTAMP
@@ -222,22 +228,23 @@ export default function ChatWindow() {
         // Scroll đến cuối danh sách tin nhắn
         // chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
 
-    } catch (error) {
-      console.log('Error sending message:', error);
-    }
-    // Mock addDocument function
-    const newMessageList = [...messages, inputValue];
-    setMessages(newMessageList);
-    console.log(newMessageList);
+        } catch (error) {
+          console.log('Error sending message:', error);
+        }
+        // Mock addDocument function
+        const newMessageList = [...messages, inputValue];
+        setMessages(newMessageList);
+        console.log(newMessageList);
 
-    form.resetFields(["message"]);
-    setInputValue('');
-    fetchMessages();
-    // focus to input again after submit
-    if (inputRef?.current) {
-      setTimeout(() => {
-        inputRef.current.focus();
-      });
+        form.resetFields(["message"]);
+        setInputValue('');
+        fetchMessages();
+        // focus to input again after submit
+        if (inputRef?.current) {
+          setTimeout(() => {
+            inputRef.current.focus();
+          });
+        }
     }
   };
 
@@ -281,13 +288,6 @@ export default function ChatWindow() {
                 Invite
               </Button>
               <Avatar.Group size='small' maxCount={2}>
-                {/* {usersInRoom?.map((member) => (
-                  <Tooltip title={member.email.charAt(0)} key={member.id}>
-                    <Avatar src="https://t4.ftcdn.net/jpg/05/49/98/39/360_F_549983970_bRCkYfk0P6PP5fKbMhZMIb07mCJ6esXL.jpg">
-                      { member.displayName?.charAt(0)?.toUpperCase()}
-                    </Avatar>
-                  </Tooltip>
-                ))} */}
               </Avatar.Group>
             </ButtonGroupStyled>
           </HeaderStyled>
@@ -298,7 +298,7 @@ export default function ChatWindow() {
                   key={mes.id}
                   content={mes.content}
                   photoURL={null}
-                  displayName={currentUser.email}
+                  displayName={mes.username ? mes.username : mes.id }
                   createdAt={mes.timestamp}
                 />
               ))}
@@ -312,6 +312,7 @@ export default function ChatWindow() {
                   placeholder='Nhập tin nhắn...'
                   bordered={false}
                   autoComplete='off'
+                  required
                 />
               </Form.Item>
               <Button type='primary' onClick={handleOnSubmit}>
