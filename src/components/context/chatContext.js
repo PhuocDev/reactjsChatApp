@@ -6,7 +6,7 @@ export const ChatProvider = ({ children }) => {
   const [selectedRoomId, setSelectedRoomId] = useState(null);
   const [selectedRoom, setSelectedRoom] = useState(null);
   return (
-    <ChatContext.Provider value={{ selectedRoom, setSelectedRoom }}>
+    <ChatContext.Provider value={{ selectedRoomId, selectedRoom, setSelectedRoom}}>
       {children}
     </ChatContext.Provider>
   );

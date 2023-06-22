@@ -22,18 +22,6 @@ const WrapperStyled = styled.div`
   }
 `;
 
-function formatDate(seconds) {
-  let formattedDate = '';
-
-  if (seconds) {
-    formattedDate = formatRelative(new Date(seconds * 1000), new Date());
-
-    formattedDate =
-      formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
-  }
-
-  return formattedDate;
-}
 
 export default function Message({ content, displayName, createdAt, photoURL }) {
   var date = new Date(createdAt);

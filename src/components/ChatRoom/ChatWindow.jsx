@@ -9,7 +9,8 @@ import 'firebase/database';
 import 'firebase/firestore';
 import { UserContext } from '../context/userContext';
 import { uid } from 'uid';
-import { async } from 'q';
+import 'firebase/auth';
+// import { db } from '../../firebase/config';
 // import { AppContext } from '../../Context/AppProvider';
 // import { addDocument } from '../../firebase/services';
 // import { AuthContext } from '../../Context/AuthProvider';
@@ -87,7 +88,7 @@ export default function ChatWindow() {
   const [form] = Form.useForm();
   const inputRef = useRef(null);
   const messageListRef = useRef(null);
-  const [searchingEmail, setSearchingEmail] = useState('');
+  const [firebaseId, setFirebaseId] = useState('');
 
   const fetchMessages = () => {
     if (selectedRoom != null) {
@@ -174,25 +175,49 @@ export default function ChatWindow() {
   };
 
   const AddUserToRoomButton = () => {
-      const email = prompt('Enter user ID/Email');
+      const email = prompt('Enter user ID/Email (@gmail.com) ');
       console.log(email);
-      // checkEmailExists(email);
-      // if (searchingEmail != null) {
-      //   addUserToRoom(selectedRoom.id, searchingEmail);
-      // }
-      addUserToRoom(selectedRoom.id, email);
+      if (email) {
+        searchMemberByEmail(email + '@gmail.com');
+      }
+
   }
+  const searchMemberByEmail = (email) => {
+    const membersRef = firebase.database().ref('members');
+    membersRef
+      .orderByChild('email')
+      .equalTo(email)
+      .once('value')
+      .then((snapshot) => {
+        const member = snapshot.val();
+        if (member) {
+          const memberKey = Object.keys(member)[0];
+          setFirebaseId(member[memberKey].firebaseId);
+          console.log(`Tìm thấy firebaseId: ${member[memberKey].firebaseId}`);
+          // setFirebaseId(firebaseId);
+          addUserToRoom(selectedRoom.id, firebaseId);
+          alert('Add new member successfully');
+        } else {
+          console.log('Không tìm thấy email');
+          alert('Không tìm thấy email');
+        }
+      })
+      .catch((error) => {
+        console.log('Lỗi khi tìm kiếm email:', error);
+      });
+  };
 
   const handleInputChange = (e) => {
-    if (e.target.value != "" && e.target.value != null ) {
-      setInputValue(e.target.value);
-    } else alert("please enter the message");
+    // if (e.target.value !== "" && e.target.value != null ) {
+    //   setInputValue(e.target.value);
+    // } else alert("please enter the message");
 
+    setInputValue(e.target.value);
   };
   const handleOnSubmit = async () => {
 
     // const messagesRef = firebase.database().ref(`rooms/${selectedRoom.id}/messages`);
-    if (inputValue == "") {
+    if (inputValue === "") {
       alert("please enter the message");
     } else {
       try {
@@ -211,8 +236,10 @@ export default function ChatWindow() {
         };
         // Thêm tin nhắn mới vào danh sách tin nhắn hiện tại
         currentMessages.push(newMessage);
+        console.log("da push tin nhan");
         // Cập nhật danh sách tin nhắn trong phòng
         await currentRoomRef.child('messages').set(currentMessages);
+        console.log("update room messages");
         // Scroll đến cuối danh sách tin nhắn
         // chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
         } catch (error) {
@@ -220,7 +247,7 @@ export default function ChatWindow() {
         }
         // Mock addDocument function
         const newMessageList = [...messages, inputValue];
-        setMessages(newMessageList);
+        // setMessages(newMessageList);
         console.log(newMessageList);
 
         form.resetFields(["message"]);
