@@ -176,28 +176,27 @@ export default function ChatWindow() {
       // Nếu đã tồn tại, hiển thị thông báo
       alert("User already exists in the room");
     } else {
-      // const usersRef = firebase.database().ref(`rooms/${roomId}/user_ids`);
-      // usersRef
-      //   .child(userId)
-      //   .set(true)
-      //   .then(() => {
-      //     console.log("User added to room successfully");
-      //   })
-      //   .catch((error) => {
-      //     console.log("Error adding user to room:", error);
-      //   });
-      //add members
-      const roomRef = firebase.database().ref(`rooms/${roomId}`);
-      roomRef
-        .child("members")
-        .push({ userId, userEmail })
-        .then(() => {
-          console.log("User added to room member successfully");
-          fetchUsersInRoom();
-        })
-        .catch((error) => {
-          console.log("Error adding user to room member:", error);
-        });
+      const usersRef = firebase.database().ref(`rooms/${roomId}/user_ids`);
+    usersRef
+      .child(userId)
+      .set(true)
+      .then(() => {
+        console.log("User added to user_ids successfully");
+        //add members
+        const roomRef = firebase.database().ref(`rooms/${roomId}`);
+        roomRef
+          .child("members")
+          .push({ userId, userEmail })
+          .then(() => {
+            fetchUsersInRoom();
+          })
+          .catch((error) => {
+            console.log("Error adding user to room member:", error);
+          });
+      })
+      .catch((error) => {
+        console.log("Error adding user to room:", error);
+      });
     }
 
   };
@@ -333,6 +332,7 @@ export default function ChatWindow() {
   const handleRemoveMember = async ( roomId, userId) => {
     const roomRef = firebase.database().ref(`rooms/${roomId}/members`);
     // Tìm kiếm member có userId tương ứng trong room
+    removeMemberFromUserIds(roomId, userId);
     roomRef
       .orderByChild('userId')
       .equalTo(userId)
@@ -360,7 +360,29 @@ export default function ChatWindow() {
         console.log('Error searching for member:', error);
       });
   }
+  const removeMemberFromUserIds = async ( roomId,userId) => {
+    if (userId === currentUser.uid) {
+      alert('this is your room');
+    } else {
+      try {
+        const db = firebase.database();
+        const roomRef = db.ref(`rooms/${roomId}`);
+        // Fetch the current user IDs of the room
+        const roomSnapshot = await roomRef.once("value");
+        const roomData = roomSnapshot.val();
+        const user_ids = roomData.user_ids || {};
+        // Remove the provided userId from the user IDs list
+        delete user_ids[userId];
+        // Update the user IDs list of the room on Firebase
+        await roomRef.update({ user_ids });
+        console.log(`User has been removed from user_ids`);
+      } catch (error) {
+        console.error("Error removing user ID from room:", error);
+        alert("Error removing user ID from room");
+      }
+    }
 
+  }
   return (
     <WrapperStyled>
       {selectedRoom ? (

@@ -50,7 +50,6 @@ export default function RoomList() {
       if (userId) {
         const roomsRef = firebase.database().ref('rooms');
         const userRoomsRef = roomsRef.orderByChild(`user_ids/${userId}`).equalTo(true);
-
         userRoomsRef.on('value', (snapshot) => {
           const roomsData = snapshot.val();
           if (roomsData) {
