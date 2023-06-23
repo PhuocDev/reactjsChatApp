@@ -1,13 +1,14 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { Collapse, Typography, Button } from 'antd';
 import styled from 'styled-components';
-import { PlusSquareOutlined } from '@ant-design/icons';
+import { MinusSquareOutlined, PlusSquareOutlined } from '@ant-design/icons';
 // import { AppContext } from '../../Context/AppProvider';
 import firebase from 'firebase/app';
 import 'firebase/firestore';
 import 'firebase/database';
 import { UserContext } from '../context/userContext';
 import { ChatContext } from '../context/chatContext';
+import confirm from 'antd/lib/modal/confirm';
 
 const { Panel } = Collapse;
 
@@ -117,6 +118,33 @@ export default function RoomList() {
       addRoom(roomName);
     }
   };
+  const deleteRoom = async (roomName) => {
+    try {
+      const db = firebase.database();
+      const roomsRef = db.ref('rooms');
+
+      // Find the room with the given name
+      const snapshot = await roomsRef.orderByChild('name').equalTo(roomName).once('value');
+
+      // If the room exists, delete it
+      if (snapshot.exists()) {
+        const roomId = Object.keys(snapshot.val())[0]; // Assuming there's only one room with the same name
+        await roomsRef.child(roomId).remove();
+        console.log(`Deleted room "${roomName}" with ID: ${roomId}`);
+      } else {
+        console.log(`Room "${roomName}" does not exist`);
+      }
+    } catch (error) {
+      console.error('Error deleting room:', error);
+    }
+  };
+  const handleDeleteRoom = (roomId) => {
+    const roomName = prompt('Enter chat room\'s name to delete:');
+    if (roomName) {
+      console.log("Tên phòng can xoa là: " + roomName);
+      deleteRoom(roomName);
+    }
+  };
 
   const mockPersons = [
     { id: 1, name: "Person 1" },
@@ -143,7 +171,15 @@ export default function RoomList() {
           className='add-room'
           onClick={handleAddRoom}
         >
-          Thêm phòng
+          Add &nbsp;&nbsp;
+        </Button>
+        <Button
+          type='text'
+          icon={<MinusSquareOutlined/>}
+          className='add-room'
+          onClick={handleDeleteRoom}
+        >
+          Delete
         </Button>
       </PanelStyled>
 

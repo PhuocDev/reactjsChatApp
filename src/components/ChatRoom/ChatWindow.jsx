@@ -281,7 +281,13 @@ export default function ChatWindow() {
         messageListRef.current.scrollHeight + 50;
     }
   }, [messages]);
+  useEffect(() => {
+    // scroll to bottom after message changed
+    console.log('chuyen sang phong khac');
+    setMessages([]);
+    fetchMessages();
 
+  }, [selectedRoom.name]);
 
   return (
     <WrapperStyled>
