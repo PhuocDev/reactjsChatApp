@@ -1,7 +1,7 @@
 import { UserAddOutlined } from '@ant-design/icons';
 import React, { useContext, useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
-import { Button, Tooltip, Avatar, Form, Input, Alert, Modal, List } from 'antd';
+import { Button, Tooltip, Avatar, Form, Input, Alert, Modal, List, Row, Col } from 'antd';
 import Message from './Message';
 import { ChatContext, ChatProvider } from '../context/chatContext';
 import firebase from 'firebase/app';
@@ -156,10 +156,29 @@ export default function ChatWindow() {
         setUsersInRoom([]);
       }
     };
-
     fetchUsersInRoom();
-  }, [selectedRoom]);
-
+  }, []);
+  const fetchUsersInRoom = async () => {
+    if (selectedRoom != null) {
+      const usersRef = firebase.database().ref(`rooms/${selectedRoom.id}/user_ids`);
+      try {
+        const snapshot = await usersRef.once('value');
+        const userIds = snapshot.val();
+        if (userIds) {
+          const userIdsArray = Object.keys(userIds);
+          console.log("danh sach thanh vien trong phong: ")
+          console.log(userIdsArray);
+          setUsersInRoom(userIdsArray);
+        } else {
+          setUsersInRoom([]);
+        }
+      } catch (error) {
+        console.log('Error fetching users in room:', error);
+      }
+    } else {
+      setUsersInRoom([]);
+    }
+  };
 
   const addUserToRoom = (roomId, userId) => {
     const usersRef = firebase.database().ref(`rooms/${roomId}/user_ids`);
@@ -197,6 +216,7 @@ export default function ChatWindow() {
           // setFirebaseId(firebaseId);
           addUserToRoom(selectedRoom.id, firebaseId);
           alert('Add new member successfully');
+          fetchUsersInRoom();
         } else {
           console.log('Không tìm thấy email');
           alert('Không tìm thấy email');
@@ -289,6 +309,19 @@ export default function ChatWindow() {
 
   }, [selectedRoom.name]);
 
+  //for modal showing user list:
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const showModal = () => {
+    setIsModalOpen(true);
+  };
+  const handleOk = () => {
+    setIsModalOpen(false);
+  };
+  const handleCancel = () => {
+    setIsModalOpen(false);
+  };
+
+
   return (
     <WrapperStyled>
       {selectedRoom ? (
@@ -308,6 +341,29 @@ export default function ChatWindow() {
               >
                 Invite
               </Button>
+              <Button type="outline-primary" onClick={showModal}>
+                Members
+              </Button>
+              <Modal
+                title="Member list:"
+                open={isModalOpen}
+                onOk={handleOk}
+                onCancel={handleCancel}
+              >
+                {usersInRoom.map((mem) => (
+                  <Row key={mem}>
+                    <Col span={16}>{mem}</Col>
+                    <Col span={8}>
+                      <Button onClick={null}>
+                        Remove
+                      </Button>
+                    </Col>
+                  </Row>
+                ))}
+                <p>Some contents...</p>
+                <p>Some contents...</p>
+                <p>Some contents...</p>
+              </Modal>
               <Avatar.Group size="small" maxCount={2}></Avatar.Group>
             </ButtonGroupStyled>
           </HeaderStyled>
