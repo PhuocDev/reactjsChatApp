@@ -82,7 +82,7 @@ const MessageListStyled = styled.div`
 export default function ChatWindow() {
 
   const {selectedRoom, setSelectedRoom} = useContext(ChatContext);
-  const [usersInRoom, setUsersInRoom] = useState([]);
+  const [usersInRoom, setUsersInRoom] = useState([{}]);
   const {currentUser, setCurrentUser} = useContext(UserContext);
   const [messages, setMessages] = useState([{}]);
   const [inputValue, setInputValue] = useState("");
@@ -133,43 +133,31 @@ export default function ChatWindow() {
     }
   }, []);
 
-  useEffect(() => {
-    const fetchUsersInRoom = async () => {
-      if (selectedRoom != null) {
-        fetchMessages();
-        const usersRef = firebase.database().ref(`rooms/${selectedRoom.id}/user_ids`);
 
-        try {
-          const snapshot = await usersRef.once('value');
-          const userIds = snapshot.val();
-          if (userIds) {
-            const userIdsArray = Object.keys(userIds);
-            console.log("danh sach thanh vien trong phong: ")
-            console.log(userIdsArray);
-            setUsersInRoom(userIdsArray);
-          } else {
-            setUsersInRoom([]);
-          }
-        } catch (error) {
-          console.log('Error fetching users in room:', error);
-        }
-      } else {
-        setUsersInRoom([]);
-      }
-    };
-    fetchUsersInRoom();
-  }, []);
+  //get member of the room from the firebase
   const fetchUsersInRoom = async () => {
+    setUsersInRoom([]);
     if (selectedRoom != null) {
-      const usersRef = firebase.database().ref(`rooms/${selectedRoom.id}/user_ids`);
+      const usersRef = firebase.database().ref(`rooms/${selectedRoom.id}/members`);
       try {
         const snapshot = await usersRef.once('value');
-        const userIds = snapshot.val();
-        if (userIds) {
-          const userIdsArray = Object.keys(userIds);
-          console.log("danh sach thanh vien trong phong: ")
-          console.log(userIdsArray);
-          setUsersInRoom(userIdsArray);
+        const members = snapshot.val();
+        if (members) {
+          const userIdsKey = Object.keys(members);
+            console.log("danh sach thanh vien trong phong: ")
+            const memberList = [];
+            for (const key in userIdsKey) {
+              if (userIdsKey.hasOwnProperty.call(userIdsKey, key)) {
+                const eachKey = userIdsKey[key];
+                memberList.push({userEmail: members[eachKey].userEmail, userId:members[eachKey].userId});
+              }
+            }
+            console.log('ben duoi la memberList');
+            console.log(memberList);
+            console.log("ben duoi la usersInRoom");
+            setUsersInRoom(memberList);
+            // console.log(usersInRoom)
+            // setUsersInRoom(members[userIdsKey]);
         } else {
           setUsersInRoom([]);
         }
@@ -181,17 +169,37 @@ export default function ChatWindow() {
     }
   };
 
-  const addUserToRoom = (roomId, userId) => {
-    const usersRef = firebase.database().ref(`rooms/${roomId}/user_ids`);
-    usersRef
-      .child(userId)
-      .set(true)
-      .then(() => {
-        console.log('User added to room successfully');
-      })
-      .catch((error) => {
-        console.log('Error adding user to room:', error);
-      });
+  const addUserToRoom = (roomId, userId, userEmail) => {
+    // Kiểm tra xem userEmail đã tồn tại trong usersInRoom chưa
+    const userExists = usersInRoom.some(user => user.userEmail === userEmail);
+    if (userExists) {
+      // Nếu đã tồn tại, hiển thị thông báo
+      alert("User already exists in the room");
+    } else {
+      // const usersRef = firebase.database().ref(`rooms/${roomId}/user_ids`);
+      // usersRef
+      //   .child(userId)
+      //   .set(true)
+      //   .then(() => {
+      //     console.log("User added to room successfully");
+      //   })
+      //   .catch((error) => {
+      //     console.log("Error adding user to room:", error);
+      //   });
+      //add members
+      const roomRef = firebase.database().ref(`rooms/${roomId}`);
+      roomRef
+        .child("members")
+        .push({ userId, userEmail })
+        .then(() => {
+          console.log("User added to room member successfully");
+          fetchUsersInRoom();
+        })
+        .catch((error) => {
+          console.log("Error adding user to room member:", error);
+        });
+    }
+
   };
 
   const AddUserToRoomButton = () => {
@@ -215,7 +223,7 @@ export default function ChatWindow() {
           setFirebaseId(member[memberKey].firebaseId);
           console.log(`Tìm thấy firebaseId: ${member[memberKey].firebaseId}`);
           // setFirebaseId(firebaseId);
-          addUserToRoom(selectedRoom.id, firebaseId);
+          addUserToRoom(selectedRoom.id, firebaseId, email);
           alert('Add new member successfully');
           fetchUsersInRoom();
         } else {
@@ -304,7 +312,7 @@ export default function ChatWindow() {
   }, [messages]);
   useEffect(() => {
     // scroll to bottom after message changed
-    console.log('chuyen sang phong khac');
+    console.log('chuyen sang phong: ' + selectedRoom.name );
     setMessages([]);
     fetchMessages();
     fetchUsersInRoom();
@@ -314,6 +322,7 @@ export default function ChatWindow() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const showModal = () => {
     setIsModalOpen(true);
+    console.log(usersInRoom);
   };
   const handleOk = () => {
     setIsModalOpen(false);
@@ -321,32 +330,35 @@ export default function ChatWindow() {
   const handleCancel = () => {
     setIsModalOpen(false);
   };
-  const handleRemoveMember = async ( roomId,userId) => {
-    if (userId === currentUser.uid) {
-      alert('this is your room');
-    } else {
-      try {
-        const db = firebase.database();
-        const roomRef = db.ref(`rooms/${roomId}`);
-        // Fetch the current user IDs of the room
-        const roomSnapshot = await roomRef.once("value");
-        const roomData = roomSnapshot.val();
-        const user_ids = roomData.user_ids || {};
-        console.log("Test: ")
-        console.log(user_ids);
-        // Remove the provided userId from the user IDs list
-        delete user_ids[userId];
-        // Update the user IDs list of the room on Firebase
-        await roomRef.update({ user_ids });
-        fetchUsersInRoom();
-        console.log(`User ID ${userId} has been removed from room ID ${roomId}`);
-        alert(`User ID ${userId} has been removed from the room`);
-      } catch (error) {
-        console.error("Error removing user ID from room:", error);
-        alert("Error removing user ID from room");
-      }
-    }
-
+  const handleRemoveMember = async ( roomId, userId) => {
+    const roomRef = firebase.database().ref(`rooms/${roomId}/members`);
+    // Tìm kiếm member có userId tương ứng trong room
+    roomRef
+      .orderByChild('userId')
+      .equalTo(userId)
+      .once('value')
+      .then((snapshot) => {
+        const member = snapshot.val();
+        if (member) {
+          const memberKey = Object.keys(member)[0];
+          // Xoá member khỏi room
+          roomRef
+            .child(memberKey)
+            .remove()
+            .then(() => {
+              console.log('Member removed successfully');
+              fetchUsersInRoom();
+            })
+            .catch((error) => {
+              console.log('Error removing member:', error);
+            });
+        } else {
+          console.log('Member not found');
+        }
+      })
+      .catch((error) => {
+        console.log('Error searching for member:', error);
+      });
   }
 
   return (
@@ -382,10 +394,10 @@ export default function ChatWindow() {
                 })} */}
                 {usersInRoom.map((mem) => {
                   return (
-                  <Row key={mem}>
-                    <Col span={16}>{mem}</Col>
+                  <Row key={Math.random()}>
+                    <Col span={16}>{mem.userEmail}</Col>
                     <Col span={8}>
-                      <Button onClick={() => handleRemoveMember(selectedRoom.id,mem)}>
+                      <Button onClick={() => handleRemoveMember(selectedRoom.id,mem.userId)}>
                         Remove
                       </Button>
                     </Col>

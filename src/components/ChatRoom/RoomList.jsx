@@ -98,6 +98,8 @@ export default function RoomList() {
         name: roomName,
         messages: [],
         createdAt: firebase.database.ServerValue.TIMESTAMP,
+        members: [], // Empty array for now, can be populated later
+        author: currentUserId,
       };
     // Thêm currentUserId vào user_ids của phòng
     roomData.user_ids = {
