@@ -10,6 +10,7 @@ import 'firebase/firestore';
 import { UserContext } from '../context/userContext';
 import { uid } from 'uid';
 import 'firebase/auth';
+import { set } from 'lodash';
 // import { db } from '../../firebase/config';
 // import { AppContext } from '../../Context/AppProvider';
 // import { addDocument } from '../../firebase/services';
@@ -306,7 +307,7 @@ export default function ChatWindow() {
     console.log('chuyen sang phong khac');
     setMessages([]);
     fetchMessages();
-
+    fetchUsersInRoom();
   }, [selectedRoom.name]);
 
   //for modal showing user list:
@@ -320,7 +321,33 @@ export default function ChatWindow() {
   const handleCancel = () => {
     setIsModalOpen(false);
   };
+  const handleRemoveMember = async ( roomId,userId) => {
+    if (userId === currentUser.uid) {
+      alert('this is your room');
+    } else {
+      try {
+        const db = firebase.database();
+        const roomRef = db.ref(`rooms/${roomId}`);
+        // Fetch the current user IDs of the room
+        const roomSnapshot = await roomRef.once("value");
+        const roomData = roomSnapshot.val();
+        const user_ids = roomData.user_ids || {};
+        console.log("Test: ")
+        console.log(user_ids);
+        // Remove the provided userId from the user IDs list
+        delete user_ids[userId];
+        // Update the user IDs list of the room on Firebase
+        await roomRef.update({ user_ids });
+        fetchUsersInRoom();
+        console.log(`User ID ${userId} has been removed from room ID ${roomId}`);
+        alert(`User ID ${userId} has been removed from the room`);
+      } catch (error) {
+        console.error("Error removing user ID from room:", error);
+        alert("Error removing user ID from room");
+      }
+    }
 
+  }
 
   return (
     <WrapperStyled>
@@ -350,19 +377,20 @@ export default function ChatWindow() {
                 onOk={handleOk}
                 onCancel={handleCancel}
               >
-                {usersInRoom.map((mem) => (
+                {/* {usersInRoom.map((mem) => {
+                  searchMemberByUid(mem);
+                })} */}
+                {usersInRoom.map((mem) => {
+                  return (
                   <Row key={mem}>
                     <Col span={16}>{mem}</Col>
                     <Col span={8}>
-                      <Button onClick={null}>
+                      <Button onClick={() => handleRemoveMember(selectedRoom.id,mem)}>
                         Remove
                       </Button>
                     </Col>
                   </Row>
-                ))}
-                <p>Some contents...</p>
-                <p>Some contents...</p>
-                <p>Some contents...</p>
+                )})}
               </Modal>
               <Avatar.Group size="small" maxCount={2}></Avatar.Group>
             </ButtonGroupStyled>

@@ -25,7 +25,7 @@ export default function UserInfo() {
   const {currentUser, setCurrentUser} = useContext(UserContext);
   //get current user information
   //const currentUser = useAuth();
-  console.log("Thông tin người đăng nhập: " );
+
   const mockUser = {
     displayName: "John Doe",
     photoURL: "https://mdbcdn.b-cdn.net/img/new/avatars/2.webp",
