@@ -133,7 +133,6 @@ export default function ChatWindow() {
     }
   }, []);
 
-
   //get member of the room from the firebase
   const fetchUsersInRoom = async () => {
     // setUsersInRoom([]);
@@ -208,6 +207,7 @@ export default function ChatWindow() {
         searchMemberByEmail(email + '@gmail.com');
       }
 
+
   }
   const searchMemberByEmail = (email) => {
     const membersRef = firebase.database().ref('members');
@@ -225,6 +225,7 @@ export default function ChatWindow() {
           addUserToRoom(selectedRoom.id, firebaseId, email);
           alert('Add new member successfully');
           fetchUsersInRoom();
+          sendEmailNotification({user_email: email, message: 'Your are added to a new group chat'});
         } else {
           console.log('Không tìm thấy email');
           alert('Không tìm thấy email');
@@ -432,6 +433,10 @@ export default function ChatWindow() {
     }
   }
   const isNotAdminOfTheRoom = usersInRoom.some(user => user.userEmail === currentUser.email);
+
+  //send email
+  const { sendEmailNotification } = useContext(ChatContext);
+
   return (
     <WrapperStyled>
       {selectedRoom ? (
