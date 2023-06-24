@@ -1,4 +1,4 @@
-import { UserAddOutlined } from '@ant-design/icons';
+import { RollbackOutlined, UserAddOutlined } from '@ant-design/icons';
 import React, { useContext, useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { Button, Tooltip, Avatar, Form, Input, Alert, Modal, List, Row, Col } from 'antd';
@@ -136,7 +136,7 @@ export default function ChatWindow() {
 
   //get member of the room from the firebase
   const fetchUsersInRoom = async () => {
-    setUsersInRoom([]);
+    // setUsersInRoom([]);
     if (selectedRoom != null) {
       const usersRef = firebase.database().ref(`rooms/${selectedRoom.id}/members`);
       try {
@@ -360,7 +360,7 @@ export default function ChatWindow() {
         console.log('Error searching for member:', error);
       });
   }
-  const removeMemberFromUserIds = async ( roomId,userId) => {
+  const removeMemberFromUserIds = async ( roomId, userId) => {
     if (userId === currentUser.uid) {
       alert('this is your room');
     } else {
@@ -381,8 +381,57 @@ export default function ChatWindow() {
         alert("Error removing user ID from room");
       }
     }
-
   }
+  const removeMemberfromMembers = async (roomId, userId) => {
+    const membersRef = firebase.database().ref(`rooms/${roomId}/members`);
+    membersRef
+      .orderByChild('userId')
+      .equalTo(userId)
+      .once('value')
+      .then((snapshot) => {
+        const memberKey = Object.keys(snapshot.val())[0];
+        if (memberKey) {
+          const memberRef = firebase.database().ref(`rooms/${roomId}/members/${memberKey}`);
+          memberRef.remove()
+            .then(() => {
+              console.log('Member removed successfully');
+            })
+            .catch((error) => {
+              console.log('Error removing member:', error);
+            });
+        } else {
+          console.log('Member not found');
+        }
+      })
+      .catch((error) => {
+        console.log('Error retrieving member:', error);
+      });
+  };
+  const handleLeaveChat = async (roomId, userId) => {
+    const confirmed = window.confirm('Are you sure you want to leave this room?');
+    if (confirmed) {
+      try {
+        const db = firebase.database();
+        const roomRef = db.ref(`rooms/${roomId}`);
+        // Fetch the current user IDs of the room
+        const roomSnapshot = await roomRef.once("value");
+        const roomData = roomSnapshot.val();
+        const user_ids = roomData.user_ids || {};
+        // Remove the provided userId from the user IDs list
+        delete user_ids[userId];
+        // Update the user IDs list of the room on Firebase
+        await roomRef.update({ user_ids });
+        console.log(`User has been removed from user_ids`);
+      } catch (error) {
+        console.error("Error removing user ID from room:", error);
+        alert("Error removing user ID from room");
+      }
+      removeMemberfromMembers(roomId, userId);
+      fetchUsersInRoom();
+
+    }
+  }
+  const isNotAdminOfTheRoom = usersInRoom.some(user => user.userEmail === currentUser.email);
   return (
     <WrapperStyled>
       {selectedRoom ? (
@@ -395,13 +444,26 @@ export default function ChatWindow() {
               </span>
             </div>
             <ButtonGroupStyled>
-              <Button
-                icon={<UserAddOutlined />}
-                type="text"
-                onClick={AddUserToRoomButton}
-              >
-                Invite
-              </Button>
+              {!isNotAdminOfTheRoom && (
+                <Button
+                  icon={<UserAddOutlined />}
+                  type="text"
+                  onClick={AddUserToRoomButton}
+                >
+                  Invite
+                </Button>
+              )}
+              {isNotAdminOfTheRoom && (
+                <Button
+                  danger
+                  type="primary"
+                  icon={<RollbackOutlined />}
+                  onClick={() => handleLeaveChat(selectedRoom.id, currentUser.uid)}
+                  style={{marginRight: '10px'}}
+                >
+                  Leave chat
+                </Button>
+              )}
               <Button type="outline-primary" onClick={showModal}>
                 Members
               </Button>
@@ -416,15 +478,22 @@ export default function ChatWindow() {
                 })} */}
                 {usersInRoom.map((mem) => {
                   return (
-                  <Row key={Math.random()}>
-                    <Col span={16}>{mem.userEmail}</Col>
-                    <Col span={8}>
-                      <Button onClick={() => handleRemoveMember(selectedRoom.id,mem.userId)}>
-                        Remove
-                      </Button>
-                    </Col>
-                  </Row>
-                )})}
+                    <Row key={Math.random()}>
+                      <Col span={16}>{mem.userEmail}</Col>
+                      {!isNotAdminOfTheRoom && (
+                        <Col span={8}>
+                          <Button
+                            onClick={() =>
+                              handleRemoveMember(selectedRoom.id, mem.userId)
+                            }
+                          >
+                            Remove
+                          </Button>
+                        </Col>
+                      )}
+                    </Row>
+                  );
+                })}
               </Modal>
               <Avatar.Group size="small" maxCount={2}></Avatar.Group>
             </ButtonGroupStyled>
