@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { Collapse, Typography, Button } from 'antd';
+import { Collapse, Typography, Button, Row, Col } from 'antd';
 import styled from 'styled-components';
 import { MinusSquareOutlined, PlusSquareOutlined } from '@ant-design/icons';
 // import { AppContext } from '../../Context/AppProvider';
@@ -163,11 +163,47 @@ export default function RoomList() {
       console.error('Error deleting room:', error);
     }
   };
-  const handleDeleteRoom = (roomId) => {
-    const roomName = prompt('Enter chat room\'s name to delete:');
+  const handleDeleteRoom = (roomName) => {
+    // const roomName = prompt('Enter chat room\'s name to delete:');
     if (roomName) {
       console.log("Tên phòng can xoa là: " + roomName);
       deleteRoom(roomName);
+    }
+  };
+  const handleDeleteRoom2 = (roomId) => {
+    // Prompt the user for confirmation
+    const confirmed = window.confirm('Are you sure you want to delete this room?');
+
+    if (confirmed) {
+      const roomsRef = firebase.database().ref('rooms');
+      const roomRef = roomsRef.child(roomId);
+
+      // Retrieve the author value from Firebase
+      roomRef.child('author').once('value')
+        .then((snapshot) => {
+          const author = snapshot.val();
+
+          // Check if the author of the room matches the current user
+          if (author === currentUser.uid) {
+            // Perform the delete operation
+            roomRef.remove()
+              .then(() => {
+                console.log('Room deleted successfully');
+                alert('Room deleted successfully')
+              })
+              .catch((error) => {
+                console.log('Error deleting room:', error);
+                alert('Can not delete room now, try again later');
+              });
+          } else {
+            // Display an error message indicating that the user does not have permission to delete the room
+            console.log('You do not have permission to delete this room');
+            alert('You do not have permission to delete this room')
+          }
+        })
+        .catch((error) => {
+          console.log('Error retrieving author value:', error);
+        });
     }
   };
 
@@ -186,9 +222,18 @@ export default function RoomList() {
     <Collapse ghost defaultActiveKey={['1']}>
       <PanelStyled header='Group chat' key='1' onClick={() => handleFetchRooms()}>
         {rooms.map((room) => (
-          <LinkStyled key={room.id} onClick={() => setSelectedRoom(room)}>
-            {room.name}
-          </LinkStyled>
+          <Row key={room.id} onClick={() => setSelectedRoom(room)}>
+            <Col span={15}> {room.name} </Col>
+            <Col span={2}>
+              <Button
+                type='text'
+                icon={<MinusSquareOutlined/>}
+                className='delete-room'
+                onClick={() => handleDeleteRoom2(room.id)}
+                >
+              </Button>
+            </Col>
+          </Row>
         ))}
         <Button
           type='text'
@@ -198,22 +243,32 @@ export default function RoomList() {
         >
           Add &nbsp;&nbsp;
         </Button>
-        <Button
+        {/* <Button
           type='text'
           icon={<MinusSquareOutlined/>}
           className='add-room'
           onClick={handleDeleteRoom}
         >
           Delete
-        </Button>
+        </Button> */}
       </PanelStyled>
 
       <PanelStyled header='Private chat' key='2'>
         {mockPersons.map((person) => (
-          <LinkStyled key={person.id} onClick={() => setSelectedRoom(person)}>
-            {person.name}
-          </LinkStyled>
+          <Row key={Math.random()} >
+            <Col span={15} >{person.name}</Col>
+            <Col span={2}>
+              <Button
+                type='text'
+                icon={<MinusSquareOutlined/>}
+                className='add-room'
+                onClick={handleDeleteRoom}
+                >
+              </Button>
+            </Col>
+          </Row>
         ))}
+
         <Button
           type='text'
           icon={<PlusSquareOutlined />}
