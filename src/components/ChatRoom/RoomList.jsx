@@ -80,6 +80,30 @@ export default function RoomList() {
     };
   }, [])
 
+  const handleFetchRooms = async () => {
+    const userId = currentUser ? currentUser.uid : null;
+      if (userId) {
+        const roomsRef = firebase.database().ref('rooms');
+        const userRoomsRef = roomsRef.orderByChild(`user_ids/${userId}`).equalTo(true);
+        userRoomsRef.on('value', (snapshot) => {
+          const roomsData = snapshot.val();
+          if (roomsData) {
+            const roomsArray = Object.keys(roomsData).map((roomId) => ({
+              id: roomId,
+              ...roomsData[roomId],
+            }));
+            // Lưu danh sách phòng vào state hoặc context
+            setRooms(roomsArray);
+          } else {
+            // Không có phòng nào chứa Id của người dùng hiện tại
+            setRooms([]);
+          }
+        });
+      } else {
+        // Người dùng chưa đăng nhập
+        setRooms([]);
+      }
+  }
 
 
   // Thêm phòng mới vào Firebase Firestore
@@ -160,7 +184,7 @@ export default function RoomList() {
 
   return (
     <Collapse ghost defaultActiveKey={['1']}>
-      <PanelStyled header='Group chat' key='1'>
+      <PanelStyled header='Group chat' key='1' onClick={() => handleFetchRooms()}>
         {rooms.map((room) => (
           <LinkStyled key={room.id} onClick={() => setSelectedRoom(room)}>
             {room.name}

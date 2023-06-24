@@ -1,6 +1,5 @@
 import React, { useContext, useState } from 'react';
 import { Form, Modal, Select, Spin, Avatar } from 'antd';
-import { AppContext } from '../../Context/AppProvider';
 import { debounce } from 'lodash';
 import { db } from '../../firebase/config';
 import { ChatProvider } from '../context/chatContext';
@@ -107,7 +106,6 @@ export default function InviteMemberModal() {
 
     setIsInviteMemberVisible(false);
   };
-  console.log("modal opened");
   return (
     <div>
       <Modal

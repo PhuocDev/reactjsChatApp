@@ -5,6 +5,7 @@ import { AuthContext } from '../context/AuthProvider';
 import firebase from 'firebase/app';
 import 'firebase/auth';
 import { UserContext } from '../context/userContext';
+import { useHistory } from 'react-router-dom/cjs/react-router-dom.min';
 // import { auth } from '../../firebase/config';
 // import { AuthContext } from '../../Context/AuthProvider';
 // import { AppContext } from '../../Context/AppProvider';
@@ -23,6 +24,7 @@ const WrapperStyled = styled.div`
 
 export default function UserInfo() {
   const {currentUser, setCurrentUser} = useContext(UserContext);
+  const history = useHistory();
   //get current user information
   //const currentUser = useAuth();
 
@@ -33,7 +35,10 @@ export default function UserInfo() {
   const {
     user: { displayName, photoURL },
   } = React.useContext(AuthContext) || { user: mockUser };
-
+  const handleSignOut = () => {
+    localStorage.removeItem('currentUserFirebase');
+    history.push("/login");
+  }
   return (
     <WrapperStyled>
       <div>
@@ -48,6 +53,7 @@ export default function UserInfo() {
           // clear state in App Provider when logout
           // clearState();
           // auth.signOut();
+          handleSignOut();
           console.log("clear state and sign out")
         }}
       >

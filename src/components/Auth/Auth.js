@@ -23,6 +23,11 @@ const Auth = () => {
         console.log(userCredential.user.uid);
         console.log(userCredential.user.email);
         console.log(password);
+        const currentUserFirebase = {
+          email: email,
+          uid: userCredential.user.uid
+        }
+        localStorage.setItem('currentUserFirebase', JSON.stringify(currentUserFirebase));
         history.push("/chatroom");
 
       })
@@ -41,7 +46,7 @@ const Auth = () => {
         console.log(userCredential.user.uid);
         console.log(userCredential.user.email);
         addMember(userCredential.user.email, userCredential.user.uid);
-        console.log(password);
+
       })
       .catch((error) => {
         setError(error.message);

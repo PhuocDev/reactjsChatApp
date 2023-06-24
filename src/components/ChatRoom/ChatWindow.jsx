@@ -49,7 +49,7 @@ const ButtonGroupStyled = styled.div`
 `;
 
 const WrapperStyled = styled.div`
-  height: 100vh;
+  height: 50vh;
 `;
 
 const ContentStyled = styled.div`
